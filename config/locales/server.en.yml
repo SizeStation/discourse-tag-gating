@@ -1,1 +1,3 @@
 en:
+  site_settings:
+    tag_gating_enabled: "Enable the NSFW Tag Gating plugin. When enabled, topics with the 'nsfw' tag will be hidden from users who do not have User Field 7 checked."

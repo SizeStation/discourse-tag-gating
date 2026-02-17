@@ -3,7 +3,10 @@ en:
     admin:
       site_settings:
         categories:
-          TODO_plugin_name: "Plugin Name"
+          # This creates a custom tab in the settings sidebar
+          tag_gating: "Tag Gating"
+
   js:
-    discourse_plugin_name:
-      placeholder: placeholder
+    tag_gating:
+      # If you ever add client-side alerts (e.g. "Access Denied"), put them here
+      access_denied: "You do not have permission to view this content."
