@@ -39,7 +39,7 @@ after_initialize do
   module FilterNSFW
     def secured(user, guardian)
       scope = super(user, guardian)
-      
+
       # Staff usually bypass restrictions
       return scope if user&.staff?
 
@@ -48,17 +48,16 @@ after_initialize do
 
       # Unless they have specific access, apply the filter
       unless has_nsfw_access
-        
         # 1. Find the ID of the restricted tag
         nsfw_tag_subquery = Tag.where(name: "nsfw").select(:id)
-        
+
         # 2. Find all topics associated with that tag
         blocked_topic_ids = TopicTag.where(tag_id: nsfw_tag_subquery).select(:topic_id)
-        
+
         # 3. Exclude posts belonging to those topics
         scope = scope.where.not(topic_id: blocked_topic_ids)
       end
-      
+
       scope
     end
   end
