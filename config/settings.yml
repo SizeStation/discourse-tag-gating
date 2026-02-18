@@ -1,3 +1,4 @@
-tag_gating_enabled:
-  default: false
-  client: false
+plugins:
+  tag_gating_enabled:
+    default: false
+    client: false

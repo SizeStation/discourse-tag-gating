@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# name: tag-gating
+# name: discourse-tag-gating
 # about: A plugin to gate access to topics based on tags
 # meta_topic_id: TODO
 # version: 0.0.1
@@ -17,9 +17,6 @@ end
 require_relative "lib/my_plugin_module/engine"
 
 after_initialize do
-  # Exit early if the plugin is disabled
-  next unless SiteSetting.tag_gating_enabled
-
   # --- 1. THE BOUNCER (Guardian) ---
   add_to_class(:guardian, :can_see_topic?) do |topic|
     return false unless super(topic)
