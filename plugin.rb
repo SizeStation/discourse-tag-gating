@@ -18,24 +18,26 @@ require_relative "lib/my_plugin_module/engine"
 
 after_initialize do
   # --- 1. THE BOUNCER (Guardian) ---
-  add_to_class(:guardian, :can_see_topic?) do |topic, *args, **kwargs|
-    return false unless super(topic, *args, **kwargs)
+  module ::DiscourseTagGatingGuardianExtension
+    def can_see_topic?(topic, *args, **kwargs)
+      return false unless super
 
-    # Use the optimized 'tags_nm' (names) array to avoid a DB hit
-    is_nsfw = topic.tags_nm&.include?("nsfw")
+      # Use the optimized 'tags_nm' (names) array to avoid a DB hit
+      is_nsfw = topic.tags_nm&.include?("nsfw")
 
-    if is_nsfw
-      # Access allowed ONLY if: User exists AND Field 7 is checked
-      return user.present? && user.user_fields["7"] == "true"
+      if is_nsfw
+        # Access allowed ONLY if: User exists AND Field 7 is checked
+        return user.present? && user.user_fields["7"] == "true"
+      end
+
+      true
     end
-
-    true
   end
 
   # --- 2. THE FILTER (Post Scope) ---
   module FilterNSFW
-    def secured(user, guardian)
-      scope = super(user, guardian)
+    def secured(user, guardian, *args, **kwargs)
+      scope = super
 
       # Staff usually bypass restrictions
       return scope if user&.staff?
@@ -60,4 +62,5 @@ after_initialize do
   end
 
   Post.singleton_class.prepend FilterNSFW
+  Guardian.prepend(::DiscourseTagGatingGuardianExtension)
 end
