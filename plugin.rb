@@ -67,7 +67,7 @@ after_initialize do
 
   # --- 3. THE LIST FILTER (TopicQuery) ---
   module FilterNSFWTopics
-    def default_results(options = {}, *args, **kwargs)
+    def default_results(options = {})
       results = super
       return results unless SiteSetting.tag_gating_enabled
 
