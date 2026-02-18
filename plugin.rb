@@ -39,8 +39,6 @@ after_initialize do
     def can_see_topic?(topic, *args, **kwargs)
       return super unless SiteSetting.tag_gating_enabled
       return false unless super
-
-      # Owner Exception
       return true if topic.user_id == user&.id
 
       if DiscourseTagGating.topic_has_nsfw_tag?(topic) && !DiscourseTagGating.nsfw_access?(user)
@@ -59,8 +57,6 @@ after_initialize do
     def secured(guardian = nil, *args, **kwargs)
       results = super
       return results unless SiteSetting.tag_gating_enabled
-
-      # Discourse passes a Guardian object, not a user directly
       user = guardian.respond_to?(:user) ? guardian.user : nil
 
       unless DiscourseTagGating.nsfw_access?(user)
@@ -89,6 +85,20 @@ after_initialize do
 
       results
     end
+  end
+
+  # --- 4. THE SEARCH FILTER ---
+  Search.advanced_filter(/.*/) do |posts, match|
+    next posts unless SiteSetting.tag_gating_enabled
+    unless DiscourseTagGating.nsfw_access?(@guardian&.user)
+      nsfw_tag_id = Tag.where(name: "nsfw").select(:id)
+      nsfw_topic_ids = TopicTag.where(tag_id: nsfw_tag_id).select(:topic_id)
+      blocked_topic_ids =
+        Topic.where(id: nsfw_topic_ids).where.not(user_id: @guardian&.user&.id).select(:id)
+      posts = posts.where.not(topic_id: blocked_topic_ids)
+    end
+
+    posts
   end
 
   TopicQuery.prepend FilterNSFWTopics
