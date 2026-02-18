@@ -28,7 +28,7 @@ after_initialize do
     is_nsfw = topic.tags_nm&.include?('nsfw')
 
     if is_nsfw
-      # Access allowed ONLY if: User exists AND Field 6 is checked
+      # Access allowed ONLY if: User exists AND Field 7 is checked
       return user.present? && user.user_fields["7"] == "true"
     end
 
