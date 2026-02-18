@@ -3,7 +3,7 @@
 # name: discourse-tag-gating
 # about: A plugin to gate access to topics based on tags
 # meta_topic_id: TODO
-# version: 0.0.1
+# version: 0.0.2
 # authors: SkyDev125
 # url: https://github.com/SizeStation/discourse-tag-gating
 # required_version: 2.7.0
@@ -82,7 +82,8 @@ after_initialize do
       unless DiscourseTagGating.nsfw_access?(@user)
         nsfw_tag_id = Tag.where(name: "nsfw").select(:id)
         nsfw_topic_ids = TopicTag.where(tag_id: nsfw_tag_id).select(:topic_id)
-        blocked_topic_ids = Topic.where(id: nsfw_topic_ids).where.not(user_id: @user&.id).select(:id)
+        blocked_topic_ids =
+          Topic.where(id: nsfw_topic_ids).where.not(user_id: @user&.id).select(:id)
         results = results.where.not(topic_id: blocked_topic_ids)
       end
 
