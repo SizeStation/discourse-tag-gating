@@ -18,8 +18,8 @@ require_relative "lib/my_plugin_module/engine"
 
 after_initialize do
   # --- 1. THE BOUNCER (Guardian) ---
-  add_to_class(:guardian, :can_see_topic?) do |topic|
-    return false unless super(topic)
+  add_to_class(:guardian, :can_see_topic?) do |topic, *args, **kwargs|
+    return false unless super(topic, *args, **kwargs)
 
     # Use the optimized 'tags_nm' (names) array to avoid a DB hit
     is_nsfw = topic.tags_nm&.include?("nsfw")
