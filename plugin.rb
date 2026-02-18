@@ -18,9 +18,20 @@ module ::DiscourseTagGating
   def self.nsfw_access?(user)
     user.present? && user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == "true"
   end
+
+  def self.topic_has_nsfw_tag?(topic)
+    if topic.association(:tags).loaded?
+      topic.tags.map(&:name)
+    else
+      topic.tags.pluck(:name)
+    end.include?("nsfw")
+  end
 end
 
 require_relative "lib/my_plugin_module/engine"
+
+class ::DiscourseTagGating::NsfwAccessError < StandardError
+end
 
 after_initialize do
   # --- 1. THE BOUNCER (Guardian) ---
@@ -28,17 +39,7 @@ after_initialize do
     def can_see_topic?(topic, *args, **kwargs)
       return super unless SiteSetting.tag_gating_enabled
       return false unless super
-
-      # Use the already-loaded association if available, otherwise query
-      tag_names =
-        if topic.association(:tags).loaded?
-          topic.tags.map(&:name)
-        else
-          topic.tags.pluck(:name)
-        end
-
-      return DiscourseTagGating.nsfw_access?(user) if tag_names.include?("nsfw")
-
+      return DiscourseTagGating.nsfw_access?(user) if DiscourseTagGating.topic_has_nsfw_tag?(topic)
       true
     end
   end
@@ -84,6 +85,29 @@ after_initialize do
     end
   end
 
+  # --- 4. THE ERROR MESSAGE ---
+  module ::DiscourseTagGatingTopicViewExtension
+    def check_and_raise_exceptions(skip_staff_action = false)
+      super
+      return unless SiteSetting.tag_gating_enabled
+
+      if DiscourseTagGating.topic_has_nsfw_tag?(@topic) &&
+           !DiscourseTagGating.nsfw_access?(@guardian.user)
+        raise ::DiscourseTagGating::NsfwAccessError
+      end
+    end
+  end
+
+  ApplicationController.rescue_from ::DiscourseTagGating::NsfwAccessError do
+    rescue_discourse_actions(
+      :invalid_access,
+      403,
+      include_ember: true,
+      custom_message: "discourse_tag_gating.nsfw_access_required",
+    )
+  end
+
+  TopicView.prepend ::DiscourseTagGatingTopicViewExtension
   TopicQuery.prepend FilterNSFWTopics
   Post.singleton_class.prepend FilterNSFW
   Guardian.prepend(::DiscourseTagGatingGuardianExtension)
