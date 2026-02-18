@@ -101,6 +101,35 @@ after_initialize do
     posts
   end
 
+  # --- 5. THE FEATURED TOPICS FILTER (CategoryList) ---
+  module FilterNSFWCategoryList
+    def load_topics
+      super
+      return unless SiteSetting.tag_gating_enabled
+      return unless @all_topics
+
+      unless DiscourseTagGating.nsfw_access?(@guardian&.user)
+        user_id = @guardian&.user&.id
+        featured_ids = @all_topics.map(&:id)
+        nsfw_tag_id = Tag.where(name: "nsfw").select(:id)
+        nsfw_featured_ids =
+          TopicTag.where(topic_id: featured_ids, tag_id: nsfw_tag_id).pluck(:topic_id).to_set
+        blocked_ids =
+          @all_topics
+            .select { |t| nsfw_featured_ids.include?(t.id) && t.user_id != user_id }
+            .map(&:id)
+            .to_set
+
+        # Filter both structures
+        @all_topics.reject! { |t| blocked_ids.include?(t.id) }
+        @topics_by_category_id.each do |cat_id, topic_ids|
+          @topics_by_category_id[cat_id] = topic_ids.reject { |tid| blocked_ids.include?(tid) }
+        end
+      end
+    end
+  end
+
+  CategoryList.prepend FilterNSFWCategoryList
   TopicQuery.prepend FilterNSFWTopics
   Post.singleton_class.prepend FilterNSFW
   Guardian.prepend(::DiscourseTagGatingGuardianExtension)
