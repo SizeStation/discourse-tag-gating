@@ -2,3 +2,9 @@ plugins:
   tag_gating_enabled:
     default: false
     client: false
+
+  tag_gating_user_field_id:
+    type: integer
+    default: 7
+    min: 1
+    client: false
