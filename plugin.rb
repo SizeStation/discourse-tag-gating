@@ -22,9 +22,14 @@ after_initialize do
     def can_see_topic?(topic, *args, **kwargs)
       return false unless super
 
-      # tags_nm is only populated on list queries; fall back to a DB check
-      tag_names = topic.tags_nm.presence || topic.tags.pluck(:name)
-      
+      # Use the already-loaded association if available, otherwise query
+      tag_names =
+        if topic.association(:tags).loaded?
+          topic.tags.map(&:name)
+        else
+          topic.tags.pluck(:name)
+        end
+
       if tag_names.include?("nsfw")
         return user.present? && user.user_fields["7"] == "true"
       end
