@@ -1,5 +1,8 @@
 en:
   site_settings:
-    tag_gating_enabled: "Enable the NSFW Tag Gating plugin. When enabled, topics with the 'nsfw' tag will be hidden from users who do not have User Field 7 checked."
+    tag_gating_enabled: "Enable the Tag Gating plugin. When enabled, topics with the configured tag will be hidden from users who do not meet the access criteria."
+    tag_gating_user_field_id: "The user field ID used to determine access to gated topics."
+    tag_gating_user_field_logic: "When enabled, users need the field checked to access gated topics. When disabled, users need the field unchecked."
+    tag_gating_tag_name: "The tag name used to gate topic access."
   discourse_tag_gating:
-    nsfw_access_required: "This topic contains NSFW content. Enable NSFW access in your profile preferences to view it."
+    access_required: "This topic requires special access. Enable it in your profile preferences to view it."

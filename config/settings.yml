@@ -13,3 +13,8 @@ plugins:
     type: boolean
     default: false
     client: false
+
+  tag_gating_tag_name:
+    type: string
+    default: "nsfw"
+    client: false
