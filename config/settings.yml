@@ -8,3 +8,8 @@ plugins:
     default: 7
     min: 1
     client: false
+
+  tag_gating_user_field_logic:
+    type: boolean
+    default: false
+    client: false

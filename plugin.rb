@@ -16,7 +16,10 @@ end
 
 module ::DiscourseTagGating
   def self.nsfw_access?(user)
-    user.present? && user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == "true"
+    return false unless user.present?
+    return true if user.staff?
+    expected = SiteSetting.tag_gating_user_field_logic ? "true" : "false"
+    user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == expected
   end
 
   def self.topic_has_nsfw_tag?(topic)
@@ -36,6 +39,10 @@ after_initialize do
     def can_see_topic?(topic, *args, **kwargs)
       return super unless SiteSetting.tag_gating_enabled
       return false unless super
+
+      # Owner Exception
+      return true if topic.user_id == user&.id
+
       if DiscourseTagGating.topic_has_nsfw_tag?(topic) && !DiscourseTagGating.nsfw_access?(user)
         raise Discourse::InvalidAccess.new(
                 "nsfw_access_required",
@@ -50,22 +57,20 @@ after_initialize do
   # --- 2. THE FILTER (Post Scope) ---
   module FilterNSFW
     def secured(guardian = nil, *args, **kwargs)
-      scope = super
-      return scope unless SiteSetting.tag_gating_enabled
+      results = super
+      return results unless SiteSetting.tag_gating_enabled
 
       # Discourse passes a Guardian object, not a user directly
       user = guardian.respond_to?(:user) ? guardian.user : nil
 
-      # Staff bypass restrictions
-      return scope if user&.staff?
-
       unless DiscourseTagGating.nsfw_access?(user)
-        nsfw_tag_subquery = Tag.where(name: "nsfw").select(:id)
-        blocked_topic_ids = TopicTag.where(tag_id: nsfw_tag_subquery).select(:topic_id)
-        scope = scope.where.not(topic_id: blocked_topic_ids)
+        nsfw_tag_id = Tag.where(name: "nsfw").select(:id)
+        nsfw_topic_ids = TopicTag.where(tag_id: nsfw_tag_id).select(:topic_id)
+        blocked_topic_ids = Topic.where(id: nsfw_topic_ids).where.not(user_id: user&.id).select(:id)
+        results = results.where.not(topic_id: blocked_topic_ids)
       end
 
-      scope
+      results
     end
   end
 
@@ -74,14 +79,11 @@ after_initialize do
     def default_results(options = {})
       results = super
       return results unless SiteSetting.tag_gating_enabled
-
-      current_user = @user
-      return results if current_user&.staff?
-
-      unless DiscourseTagGating.nsfw_access?(current_user)
-        nsfw_tag_subquery = Tag.where(name: "nsfw").select(:id)
-        blocked_topic_ids = TopicTag.where(tag_id: nsfw_tag_subquery).select(:topic_id)
-        results = results.where.not(id: blocked_topic_ids)
+      unless DiscourseTagGating.nsfw_access?(@user)
+        nsfw_tag_id = Tag.where(name: "nsfw").select(:id)
+        nsfw_topic_ids = TopicTag.where(tag_id: nsfw_tag_id).select(:topic_id)
+        blocked_topic_ids = Topic.where(id: nsfw_topic_ids).where.not(user_id: @user&.id).select(:id)
+        results = results.where.not(topic_id: blocked_topic_ids)
       end
 
       results
