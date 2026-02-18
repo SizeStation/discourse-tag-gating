@@ -16,7 +16,7 @@ end
 
 module ::DiscourseTagGating
   def self.nsfw_access?(user)
-    return false unless user.present?
+    return false unless user.blank?
     return true if user.staff?
     expected = SiteSetting.tag_gating_user_field_logic ? "true" : "false"
     user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == expected
