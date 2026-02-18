@@ -22,11 +22,10 @@ after_initialize do
     def can_see_topic?(topic, *args, **kwargs)
       return false unless super
 
-      # Use the optimized 'tags_nm' (names) array to avoid a DB hit
-      is_nsfw = topic.tags_nm&.include?("nsfw")
-
-      if is_nsfw
-        # Access allowed ONLY if: User exists AND Field 7 is checked
+      # tags_nm is only populated on list queries; fall back to a DB check
+      tag_names = topic.tags_nm.presence || topic.tags.pluck(:name)
+      
+      if tag_names.include?("nsfw")
         return user.present? && user.user_fields["7"] == "true"
       end
 
@@ -36,27 +35,23 @@ after_initialize do
 
   # --- 2. THE FILTER (Post Scope) ---
   module FilterNSFW
-    def secured(user, guardian, *args, **kwargs)
+    def secured(guardian = nil, *args, **kwargs)
       scope = super
-
-      # Staff usually bypass restrictions
-      return scope if user&.staff?
-
-      # Define access rule: User must exist AND have Field 7 checked
-      has_nsfw_access = user.present? && user.user_fields["7"] == "true"
-
-      # Unless they have specific access, apply the filter
+      
+      # Discourse passes a Guardian object, not a user directly
+      current_user = guardian.respond_to?(:user) ? guardian.user : nil
+      
+      # Staff bypass restrictions
+      return scope if current_user&.staff?
+      
+      has_nsfw_access = current_user.present? && current_user.user_fields["7"] == "true"
+      
       unless has_nsfw_access
-        # 1. Find the ID of the restricted tag
         nsfw_tag_subquery = Tag.where(name: "nsfw").select(:id)
-
-        # 2. Find all topics associated with that tag
         blocked_topic_ids = TopicTag.where(tag_id: nsfw_tag_subquery).select(:topic_id)
-
-        # 3. Exclude posts belonging to those topics
         scope = scope.where.not(topic_id: blocked_topic_ids)
       end
-
+      
       scope
     end
   end
