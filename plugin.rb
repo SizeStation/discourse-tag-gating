@@ -25,7 +25,7 @@ after_initialize do
     return false unless super(topic)
 
     # Use the optimized 'tags_nm' (names) array to avoid a DB hit
-    is_nsfw = topic.tags_nm&.include?('nsfw')
+    is_nsfw = topic.tags_nm&.include?("nsfw")
 
     if is_nsfw
       # Access allowed ONLY if: User exists AND Field 7 is checked
@@ -50,7 +50,7 @@ after_initialize do
       unless has_nsfw_access
         
         # 1. Find the ID of the restricted tag
-        nsfw_tag_subquery = Tag.where(name: 'nsfw').select(:id)
+        nsfw_tag_subquery = Tag.where(name: "nsfw").select(:id)
         
         # 2. Find all topics associated with that tag
         blocked_topic_ids = TopicTag.where(tag_id: nsfw_tag_subquery).select(:topic_id)
