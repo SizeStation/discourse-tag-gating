@@ -84,7 +84,7 @@ after_initialize do
         nsfw_topic_ids = TopicTag.where(tag_id: nsfw_tag_id).select(:topic_id)
         blocked_topic_ids =
           Topic.where(id: nsfw_topic_ids).where.not(user_id: @user&.id).select(:id)
-        results = results.where.not(topic_id: blocked_topic_ids)
+        results = results.where.not(id: blocked_topic_ids)
       end
 
       results
