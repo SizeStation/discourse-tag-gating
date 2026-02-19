@@ -18,10 +18,10 @@ module ::DiscourseTagGating
   def self.has_access?(user)
     return false if user.blank?
     return true if user.staff?
-    Rails.logger.debug("Checking tag gating access for user #{user.id} with fields #{user.user_fields}, looking at field #{user.user_fields[SiteSetting.tag_gating_user_field_id.to_s]}")
-    Rails.logger.debug("Site settings: tag_gating_user_field_id=#{SiteSetting.tag_gating_user_field_id}, tag_gating_user_field_id=#{SiteSetting.tag_gating_user_field_id.to_s}, tag_gating_user_field_logic=#{SiteSetting.tag_gating_user_field_logic}")
+    Rails.logger.info("Checking tag gating access for user #{user.id} with fields #{user.user_fields}, looking at field #{user.user_fields[SiteSetting.tag_gating_user_field_id.to_s]}")
+    Rails.logger.info("Site settings: tag_gating_user_field_id=#{SiteSetting.tag_gating_user_field_id}, tag_gating_user_field_id=#{SiteSetting.tag_gating_user_field_id.to_s}, tag_gating_user_field_logic=#{SiteSetting.tag_gating_user_field_logic}")
     expected = SiteSetting.tag_gating_user_field_logic ? "true" : "false"
-    Rails.logger.debug("Access result: #{expected}")
+    Rails.logger.info("Access result: #{expected}")
     user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == expected
   end
 
@@ -49,7 +49,7 @@ after_initialize do
       return super unless SiteSetting.tag_gating_enabled
       return false unless super
       return true if topic.user_id == user&.id
-      Rails.logger.debug("Tag name: #{SiteSetting.tag_gating_tag_name}, #{SiteSetting.tag_gating_tag_name == "nsfw"}")
+      Rails.logger.info("Tag name: #{SiteSetting.tag_gating_tag_name}, #{SiteSetting.tag_gating_tag_name == "nsfw"}")
 
       if DiscourseTagGating.topic_has_tag?(topic) && !DiscourseTagGating.has_access?(user)
         raise Discourse::InvalidAccess.new(
