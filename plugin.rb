@@ -19,7 +19,6 @@ module ::DiscourseTagGating
     return false if user.blank?
     return true if user.staff?
     user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == SiteSetting.tag_gating_user_field_logic
-  end
   rescue => e
     Rails.logger.error("TAG GATING: has_access? failed for user #{user&.id}: #{e.message}")
     false
@@ -109,25 +108,19 @@ after_initialize do
     def find_relevant_topics
       super
       return unless SiteSetting.tag_gating_enabled
-      return unless @all_topics
+      return unless @all_topics&.any?
 
-      unless DiscourseTagGating.has_access?(@guardian&.user)
-        user_id = @guardian&.user&.id
-        featured_ids = @all_topics.map(&:id)
-        tag_id = Tag.where(name: SiteSetting.tag_gating_tag_name).select(:id)
-        tagged_featured_ids =
-          TopicTag.where(topic_id: featured_ids, tag_id: tag_id).pluck(:topic_id).to_set
+      user = @guardian&.user
+      return if DiscourseTagGating.has_access?(user)
 
-        blocked_ids =
-          @all_topics
-            .select { |t| tagged_featured_ids.include?(t.id) && t.user_id != user_id }
-            .map(&:id)
-            .to_set
+      featured_ids = @all_topics.map(&:id)
+      tag_id = Tag.where(name: SiteSetting.tag_gating_tag_name).select(:id)
+      tagged_featured_ids =
+        TopicTag.where(topic_id: featured_ids, tag_id: tag_id).pluck(:topic_id).to_set
 
-        categories_with_descendants.each do |c|
-          next if c.displayable_topics.blank?
-          c.displayable_topics.reject! { |t| blocked_ids.include?(t.id) }
-        end
+      categories_with_descendants.each do |c|
+        next if c.displayable_topics.blank?
+        c.displayable_topics.reject! { |t| tagged_featured_ids.include?(t.id) && t.user_id != user&.id }
       end
     end
   end
