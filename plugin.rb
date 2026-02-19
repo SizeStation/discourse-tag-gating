@@ -18,8 +18,6 @@ module ::DiscourseTagGating
   def self.has_access?(user)
     return false if user.blank?
     return true if user.staff?
-    Rails.logger.error("Checking tag gating access for user #{user.id}, looking at field #{user.user_fields[SiteSetting.tag_gating_user_field_id.to_s]}")
-    Rails.logger.error("Expected value for access: #{SiteSetting.tag_gating_user_field_logic}")
     user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == SiteSetting.tag_gating_user_field_logic
   end
 
@@ -34,7 +32,9 @@ module ::DiscourseTagGating
   def self.blocked_topic_ids_for(user)
     tag_id = Tag.where(name: SiteSetting.tag_gating_tag_name).select(:id)
     topic_ids = TopicTag.where(tag_id: tag_id).select(:topic_id)
-    Topic.where(id: topic_ids).where.not(user_id: user&.id).select(:id)
+    scope = Topic.where(id: topic_ids)
+    scope = scope.where.not(user_id: user.id) if !user.blank?
+    scope.select(:id)
   end
 end
 
@@ -99,7 +99,7 @@ after_initialize do
 
   # --- 5. THE FEATURED TOPICS FILTER (CategoryList) ---
   module FilterGatedCategoryList
-    def load_topics
+    def find_relevant_topics
       super
       return unless SiteSetting.tag_gating_enabled
       return unless @all_topics
@@ -110,16 +110,16 @@ after_initialize do
         tag_id = Tag.where(name: SiteSetting.tag_gating_tag_name).select(:id)
         tagged_featured_ids =
           TopicTag.where(topic_id: featured_ids, tag_id: tag_id).pluck(:topic_id).to_set
+
         blocked_ids =
           @all_topics
             .select { |t| tagged_featured_ids.include?(t.id) && t.user_id != user_id }
             .map(&:id)
             .to_set
 
-        # Filter both structures
-        @all_topics.reject! { |t| blocked_ids.include?(t.id) }
-        @topics_by_category_id.each do |cat_id, topic_ids|
-          @topics_by_category_id[cat_id] = topic_ids.reject { |tid| blocked_ids.include?(tid) }
+        categories_with_descendants.each do |c|
+          next if c.displayable_topics.blank?
+          c.displayable_topics.reject! { |t| blocked_ids.include?(t.id) }
         end
       end
     end
