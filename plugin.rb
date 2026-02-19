@@ -49,6 +49,7 @@ after_initialize do
       return super unless SiteSetting.tag_gating_enabled
       return false unless super
       return true if topic.user_id == user&.id
+      LOGGER.debug("Tag name: #{SiteSetting.tag_gating_tag_name}, #{SiteSetting.tag_gating_tag_name == "nsfw"}")
 
       if DiscourseTagGating.topic_has_tag?(topic) && !DiscourseTagGating.has_access?(user)
         raise Discourse::InvalidAccess.new(
