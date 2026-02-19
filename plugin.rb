@@ -20,6 +20,10 @@ module ::DiscourseTagGating
     return true if user.staff?
     user.user_fields[SiteSetting.tag_gating_user_field_id.to_s] == SiteSetting.tag_gating_user_field_logic
   end
+  rescue => e
+    Rails.logger.error("TAG GATING: has_access? failed for user #{user&.id}: #{e.message}")
+    false
+  end
 
   def self.topic_has_tag?(topic)
     if topic.association(:tags).loaded?
@@ -27,6 +31,9 @@ module ::DiscourseTagGating
     else
       topic.tags.pluck(:name)
     end.include?(SiteSetting.tag_gating_tag_name)
+  rescue => e
+    Rails.logger.error("TAG GATING: topic_has_tag? failed for topic #{topic&.id}: #{e.message}")
+    true
   end
 
   def self.blocked_topic_ids_for(user)
