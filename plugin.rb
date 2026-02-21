@@ -93,16 +93,6 @@ after_initialize do
     end
   end
 
-  # --- 4. THE SEARCH FILTER ---
-  Search.advanced_filter(/.*/) do |posts, match|
-    next posts unless SiteSetting.tag_gating_enabled
-    unless DiscourseTagGating.has_access?(@guardian&.user)
-      posts = posts.where.not(topic_id: DiscourseTagGating.blocked_topic_ids_for(@guardian&.user))
-    end
-
-    posts
-  end
-
   # --- 5. THE FEATURED TOPICS FILTER (CategoryList) ---
   module FilterGatedCategoryList
     def find_relevant_topics
