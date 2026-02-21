@@ -94,18 +94,12 @@ after_initialize do
   end
 
   # --- 4. THE SEARCH FILTER ---
-  Search.advanced_filter(/tag_gating:apply/) do |posts, match|
-    next posts unless SiteSetting.tag_gating_enabled
-    unless DiscourseTagGating.has_access?(@guardian&.user)
-      posts = posts.where.not(topic_id: DiscourseTagGating.blocked_topic_ids_for(@guardian&.user))
-    end
-    posts
-  end
-
   module ::InjectTagGatingFilter
-    def execute(readonly_mode: Discourse.readonly_mode?)
-      @term = "#{@term} tag_gating:apply".strip
-      super(readonly_mode: readonly_mode)
+    def posts_query(limit, **opts)
+      posts = super
+      return posts unless SiteSetting.tag_gating_enabled
+      return posts if DiscourseTagGating.has_access?(@guardian&.user)
+      posts.where.not(topic_id: DiscourseTagGating.blocked_topic_ids_for(@guardian&.user))
     end
   end
 
