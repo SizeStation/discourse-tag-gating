@@ -103,9 +103,9 @@ after_initialize do
   end
 
   module ::InjectTagGatingFilter
-    def execute(args = nil)
+    def execute(readonly_mode: Discourse.readonly_mode?)
       @term = "#{@term} tag_gating:apply".strip
-      super
+      super(readonly_mode: readonly_mode)
     end
   end
 
